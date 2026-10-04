@@ -1,0 +1,6 @@
+{
+  "name": "Canvas - Visual AI Website Builder",
+  "description": "Full-featured visual website builder with AI generation, live canvas editing, templates, component tree, CMS, version history, and real-time preview.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

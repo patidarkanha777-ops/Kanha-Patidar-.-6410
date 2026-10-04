@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    // Validation Blueprint: Project
+    function isValidProject(data) {
+      return data.keys().hasAll(['ownerId', 'name', 'customCss', 'isPublished', 'root', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'name', 'customCss', 'isPublished', 'root', 'createdAt', 'updatedAt'])
+        && data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerId == request.auth.uid
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.customCss is string && data.customCss.size() <= 50000
+        && data.isPublished is bool
+        && data.root is map && data.root.size() >= 1 && data.root.size() <= 30
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: FormLead
+    function isValidFormLead(data) {
+      return data.keys().hasAll(['ownerId', 'formType', 'visitorName', 'visitorEmail', 'message', 'pageName', 'createdAt'])
+        && data.keys().hasOnly(['ownerId', 'formType', 'visitorName', 'visitorEmail', 'message', 'pageName', 'createdAt'])
+        && data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerId == request.auth.uid
+        && data.formType is string && data.formType.size() >= 1 && data.formType.size() <= 32
+        && (data.formType == 'contact' || data.formType == 'signup' || data.formType == 'booking')
+        && data.visitorName is string && data.visitorName.size() >= 1 && data.visitorName.size() <= 120
+        && data.visitorEmail is string && data.visitorEmail.size() >= 3 && data.visitorEmail.size() <= 160
+        && data.message is string && data.message.size() >= 1 && data.message.size() <= 2000
+        && data.pageName is string && data.pageName.size() >= 1 && data.pageName.size() <= 100
+        && data.createdAt is timestamp;
+    }
+
+    // Collection: /projects/{projectId}
+    match /projects/{projectId} {
+      allow get: if isValidId(projectId) && (
+        existing().isPublished == true ||
+        (isSignedIn() && existing().ownerId == request.auth.uid)
+      );
+
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && isValidId(projectId)
+        && isValidProject(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn()
+        && isValidId(projectId)
+        && isValidProject(incoming())
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Save project content & publish state
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'customCss', 'isPublished', 'root', 'updatedAt']) ||
+          // Action 2: Toggle publish state only
+          incoming().diff(existing()).affectedKeys().hasOnly(['isPublished', 'updatedAt'])
+        );
+
+      allow delete: if isSignedIn()
+        && isValidId(projectId)
+        && existing().ownerId == request.auth.uid;
+    }
+
+    // Collection: /leads/{leadId}
+    match /leads/{leadId} {
+      allow get: if isSignedIn()
+        && isValidId(leadId)
+        && existing().ownerId == request.auth.uid;
+
+      allow list: if isSignedIn()
+        && existing().ownerId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && isValidId(leadId)
+        && isValidFormLead(incoming())
+        && incoming().createdAt == request.time;
+
+      allow update: if false;
+
+      allow delete: if isSignedIn()
+        && isValidId(leadId)
+        && existing().ownerId == request.auth.uid;
+    }
+  }
+}

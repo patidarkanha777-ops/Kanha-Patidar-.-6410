@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "A website project created in Canvas Visual Website Builder, supporting cloud save and 1-click live publishing.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the project creator.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the website project.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "customCss": {
+          "type": "string",
+          "description": "Custom CSS styles attached to the project.",
+          "minLength": 0,
+          "maxLength": 50000
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "Whether the project is publicly viewable via its shareable live link."
+        },
+        "root": {
+          "type": "object",
+          "description": "Root BNode map representing the visual page hierarchy."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the project was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the project was last updated."
+        }
+      },
+      "required": ["ownerId", "name", "customCss", "isPublished", "root", "createdAt", "updatedAt"]
+    },
+    "FormLead": {
+      "title": "FormLead",
+      "description": "A form submission from a Contact, Signup, or Booking form block on the canvas.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the site owner who owns this lead.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "formType": {
+          "type": "string",
+          "description": "Type of visual form block submitted.",
+          "enum": ["contact", "signup", "booking"],
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "visitorName": {
+          "type": "string",
+          "description": "Name submitted by the visitor.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "visitorEmail": {
+          "type": "string",
+          "description": "Email submitted by the visitor.",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "message": {
+          "type": "string",
+          "description": "Message, booking date, or additional details.",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "pageName": {
+          "type": "string",
+          "description": "Name of the page where the form was submitted.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the lead was created."
+        }
+      },
+      "required": ["ownerId", "formType", "visitorName", "visitorEmail", "message", "pageName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Cloud-saved and live-published website projects."
+    },
+    "/leads/{leadId}": {
+      "schema": { "$ref": "#/entities/FormLead" },
+      "description": "Private form leads and submissions isolated per site owner."
+    }
+  }
+}
